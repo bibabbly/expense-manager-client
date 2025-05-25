@@ -14,6 +14,8 @@ const Navbar = () => {
       <div style={styles.left}>
         <Link to="/dashboard" style={styles.link}>Dashboard</Link>
         <Link to="/add-expense" style={styles.link}>Add Expense</Link>
+        <Link to="/categories" style={styles.link}>Categories </Link>
+
       </div>
       <div style={styles.right}>
         <button onClick={handleLogout} style={styles.logout}>Logout</button>
@@ -31,11 +33,13 @@ const styles = {
     justifyContent: 'space-between',
     alignItems: 'center'
   },
-  link: {
+    link: {
     marginRight: '1rem',
-    color: '#fff',
     textDecoration: 'none',
-    fontWeight: 'bold'
+    color: '#fff',
+    background: '#007bff',
+    padding: '0.5rem 1rem',
+    borderRadius: '4px'
   },
   logout: {
     backgroundColor: '#fff',

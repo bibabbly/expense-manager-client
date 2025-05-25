@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import React, { useState } from 'react';
+import React, { useState , useEffect} from 'react';
 import axios from 'axios';
 import Navbar from '../components/NavBar';
 import { toast } from 'react-toastify';
@@ -9,8 +9,32 @@ const AddExpense = () => {
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
   const [category, setCategory] = useState('');
+  const [categories, setCategories] = useState([]);
+
 
   const navigate = useNavigate();
+
+  
+  useEffect(() => {
+    const fetchCategories = async () => {
+      const token = localStorage.getItem('token');
+      try {
+        const response = await axios.get(
+          `${process.env.REACT_APP_API_URL}/api/categories`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`
+            }
+          }
+        );
+        setCategories(response.data);
+      } catch (err) {
+        console.error('Failed to load categories:', err);
+      }
+    };
+
+    fetchCategories();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,7 +42,7 @@ const AddExpense = () => {
       amount,
       description,
       dateTime: `${date}T00:00:00`,
-      category
+      category: { id: category }
     };
 
     const token = localStorage.getItem('token');
@@ -95,22 +119,28 @@ const AddExpense = () => {
               style={styles.input}
             />
           </div>
+
           <div style={styles.field}>
-              <label style={styles.label}>Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                required
-                style={styles.input}
-              >
-                <option value="">Select Category</option>
-                <option value="Food">Food</option>
-                <option value="Transport">Transport</option>
-                <option value="Bills">Bills</option>
-                <option value="Entertainment">Entertainment</option>
-                <option value="Others">Others</option>
-              </select>
-        </div>
+            <label>Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              required
+              style={styles.input}
+            >
+              <option value="">-- Select Category --</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+
+
+
+            
 
 
           <button type="submit" style={styles.button}>Add Expense</button>

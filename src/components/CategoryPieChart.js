@@ -6,12 +6,14 @@ import {
 const COLORS = ['#007bff', '#28a745', '#ffc107', '#17a2b8', '#6610f2', '#fd7e14'];
 
 const CategoryPieChart = ({ expenses }) => {
-  // Group total by category
   const totals = {};
 
   expenses.forEach(exp => {
-    if (!totals[exp.category]) totals[exp.category] = 0;
-    totals[exp.category] += exp.amount;
+    const category = exp.category;
+    const name = category ? category.name : 'Unknown';
+
+    if (!totals[name]) totals[name] = 0;
+    totals[name] += exp.amount;
   });
 
   const data = Object.entries(totals).map(([name, value]) => ({

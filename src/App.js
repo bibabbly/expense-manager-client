@@ -6,6 +6,7 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import AddExpense from './pages/AddExpense';
 import EditExpense from './pages/EditExpense';
+import CategoryManager from './pages/CategoryManager';
 import PrivateRoute from './components/PrivateRoute';
 
 import { ToastContainer } from 'react-toastify';
@@ -47,6 +48,16 @@ function App() {
             </PrivateRoute>
           }
         />
+       <Route
+        path="/categories"
+        element={
+          <PrivateRoute>
+            <CategoryManager />
+          </PrivateRoute>
+        }
+      />
+              
+
       </Routes>
 
       {/* Toast notification container */}

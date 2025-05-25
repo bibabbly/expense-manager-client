@@ -19,14 +19,7 @@ const Signup = () => {
   
     try {
       //const response = await axios.post('http://localhost:8080/api/auth/signup', payload);
-      const response = await axios.post(  `${process.env.REACT_APP_API_URL}/api/auth/signup`,  payload,
-  {
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  }
-);
-
+      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/auth/signup`, payload);
 
 
       console.log('Signup success:', response.data);

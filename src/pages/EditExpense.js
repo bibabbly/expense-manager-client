@@ -12,7 +12,7 @@ const EditExpense = () => {
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
   const [category, setCategory] = useState('');
-
+  const [categories, setCategories] = useState([]);
 
   const token = localStorage.getItem('token');
 
@@ -20,29 +20,36 @@ const EditExpense = () => {
     const fetchExpense = async () => {
       try {
         const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/expenses/${id}`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
+          headers: { Authorization: `Bearer ${token}` }
         });
 
-  
-        const { amount, description, dateTime } = response.data;
+        const { amount, description, dateTime, category } = response.data;
         setAmount(amount);
         setDescription(description);
         setDate(dateTime.split('T')[0]);
-        setCategory(category);
-
+        setCategory(category?.id || '');
       } catch (err) {
         console.error('Failed to load expense:', err.response?.data || err.message);
-        //alert('Session expired or invalid. Please log in again.');
         toast.error('Session expired or invalid. Please log in again.');
         navigate('/login');
       }
     };
-  
+
+    const fetchCategories = async () => {
+      try {
+        const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/categories`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setCategories(response.data);
+      } catch (err) {
+        console.error('Failed to load categories:', err);
+        toast.error('Could not load categories.');
+      }
+    };
+
     fetchExpense();
+    fetchCategories();
   }, [id, navigate]);
-  
 
   const handleUpdate = async (e) => {
     e.preventDefault();
@@ -51,31 +58,21 @@ const EditExpense = () => {
       amount,
       description,
       dateTime: `${date}T00:00:00`,
-      category 
+      category: { id: category }
     };
 
     try {
-        /*await axios.put(`http://localhost:8080/api/expenses/${id}`, updatedExpense, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        */
-         await axios.put(`${process.env.REACT_APP_API_URL}/api/expenses/${id}`, updatedExpense, {
-          headers: {
-            Authorization: `Bearer ${token}`
-                  }
-          });
+      await axios.put(`${process.env.REACT_APP_API_URL}/api/expenses/${id}`, updatedExpense, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
 
-
-      
-        alert('Expense updated successfully!');
-        navigate('/dashboard');
-      } catch (err) {
-        console.error('Update failed:', err.response?.data || err.message);
-        alert('Session expired or unauthorized. Please log in again.');
-        navigate('/login');
-      }
+      toast.success('Expense updated successfully!');
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Update failed:', err.response?.data || err.message);
+      toast.error('Session expired or unauthorized.');
+      navigate('/login');
+    }
   };
 
   return (
@@ -84,7 +81,7 @@ const EditExpense = () => {
       <div style={styles.container}>
         <form onSubmit={handleUpdate} style={styles.form}>
           <h2 style={styles.title}>Edit Expense</h2>
-  
+
           <div style={styles.field}>
             <label style={styles.label}>Amount</label>
             <input
@@ -95,7 +92,7 @@ const EditExpense = () => {
               style={styles.input}
             />
           </div>
-  
+
           <div style={styles.field}>
             <label style={styles.label}>Description</label>
             <input
@@ -106,7 +103,7 @@ const EditExpense = () => {
               style={styles.input}
             />
           </div>
-  
+
           <div style={styles.field}>
             <label style={styles.label}>Date</label>
             <input
@@ -126,23 +123,22 @@ const EditExpense = () => {
               required
               style={styles.input}
             >
-              <option value="">Select Category</option>
-              <option value="Food">Food</option>
-              <option value="Transport">Transport</option>
-              <option value="Bills">Bills</option>
-              <option value="Entertainment">Entertainment</option>
-              <option value="Others">Others</option>
+              <option value="">-- Select Category --</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
             </select>
-      </div>
+          </div>
 
-  
           <button type="submit" style={styles.button}>Update Expense</button>
         </form>
       </div>
     </>
   );
-  
 };
+
 const styles = {
   container: {
     display: 'flex',
@@ -194,6 +190,5 @@ const styles = {
     fontWeight: 'bold'
   }
 };
-
 
 export default EditExpense;
