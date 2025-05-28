@@ -16,22 +16,47 @@ const Dashboard = () => {
   const [showConfirm, setShowConfirm] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
   const [showCharts, setShowCharts] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [allExpenses, setAllExpenses] = useState([]);
+
+
 
   const navigate = useNavigate();
 
   const token = localStorage.getItem('token');
 
-  const fetchExpenses = async () => {
-    try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/expenses`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      setExpenses(response.data);
-    } catch (err) {
-      console.error('Failed to fetch expenses:', err.response?.data || err.message);
-      navigate('/login');
-    }
-  };
+ const fetchExpenses = async () => {
+  try {
+    const response = await axios.get(
+      `${process.env.REACT_APP_API_URL}/api/expenses?page=${currentPage}&size=${pageSize}`,
+      { headers: { Authorization: `Bearer ${token}` } }
+    );
+    setExpenses(response.data.content); // only content, not full page object
+    setTotalPages(response.data.totalPages); // for pagination controls
+    setTotalElements(response.data.totalElements);
+
+  } catch (err) {
+    console.error('Failed to fetch expenses:', err.response?.data || err.message);
+    navigate('/login');
+  }
+};
+
+const fetchAllExpenses = async () => {
+  try {
+    const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/expenses/all`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    setAllExpenses(response.data);
+  } catch (err) {
+    console.error('Failed to fetch all expenses for analytics:', err);
+    toast.error('Could not load analytics data.');
+  }
+};
+
+
 
   const fetchCategories = async () => {
     try {
@@ -45,10 +70,13 @@ const Dashboard = () => {
     }
   };
 
-  useEffect(() => {
-    fetchExpenses();
-    fetchCategories();
-  }, [navigate]);
+useEffect(() => {
+  fetchExpenses();
+  fetchAllExpenses();
+  fetchCategories();
+}, [currentPage, pageSize]);
+
+
 
   const confirmDelete = async () => {
     try {
@@ -85,14 +113,15 @@ const Dashboard = () => {
     return { ...base, backgroundColor };
   };
 
-  const getCategoryTotals = () => {
-    const totals = {};
-    expenses.forEach(exp => {
-      const name = exp.category?.name || 'Uncategorized';
-      totals[name] = (totals[name] || 0) + exp.amount;
-    });
-    return totals;
-  };
+const getCategoryTotals = () => {
+  const totals = {};
+  allExpenses.forEach(exp => {
+    const name = exp.category?.name || 'Uncategorized';
+    totals[name] = (totals[name] || 0) + exp.amount;
+  });
+  return totals;
+};
+
 
   return (
     <>
@@ -142,8 +171,8 @@ const Dashboard = () => {
         </div>
 
         <div className={`chart-wrapper ${showCharts ? 'show' : ''}`}>
-          <MonthlyChart expenses={expenses} />
-          <CategoryPieChart expenses={expenses} categories={categories} />
+          <MonthlyChart expenses={allExpenses} />
+          <CategoryPieChart expenses={allExpenses} categories={categories} />
 
         </div>
 
@@ -181,6 +210,46 @@ const Dashboard = () => {
               ))}
           </tbody>
         </table>
+        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            Showing {(currentPage * pageSize) + 1}–
+            {Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements}
+          </div>
+
+          <div>
+            <label style={{ marginRight: '0.5rem' }}>Rows per page:</label>
+            <select
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value));
+                setCurrentPage(0); // reset to first page
+              }}
+            >
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+          </div>
+        </div>
+
+        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 0))}
+              disabled={currentPage === 0}
+            >
+              ◀ Previous
+            </button>
+
+            <span>Page {currentPage + 1} of {totalPages}</span>
+
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages - 1))}
+              disabled={currentPage + 1 === totalPages}
+            >
+              Next ▶
+            </button>
+      </div>
+
 
         {showConfirm && (
           <ConfirmDialog
