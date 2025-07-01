@@ -6,6 +6,20 @@ import { toast } from 'react-toastify';
 import ConfirmDialog from '../components/ConfirmDialog';
 import MonthlyChart from '../components/MonthlyChart';
 import CategoryPieChart from '../components/CategoryPieChart';
+import { 
+  DollarSign, 
+  TrendingUp, 
+  Calendar, 
+  PieChart, 
+  BarChart3, 
+  Edit2, 
+  Trash2, 
+  ChevronLeft, 
+  ChevronRight,
+  Filter,
+  Plus,
+  Activity
+} from 'lucide-react';
 import './Dashboard.css';
 
 const Dashboard = () => {
@@ -22,41 +36,35 @@ const Dashboard = () => {
   const [totalElements, setTotalElements] = useState(0);
   const [allExpenses, setAllExpenses] = useState([]);
 
-
-
   const navigate = useNavigate();
-
   const token = localStorage.getItem('token');
 
- const fetchExpenses = async () => {
-  try {
-    const response = await axios.get(
-      `${process.env.REACT_APP_API_URL}/api/expenses?page=${currentPage}&size=${pageSize}`,
-      { headers: { Authorization: `Bearer ${token}` } }
-    );
-    setExpenses(response.data.content); // only content, not full page object
-    setTotalPages(response.data.totalPages); // for pagination controls
-    setTotalElements(response.data.totalElements);
+  const fetchExpenses = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.REACT_APP_API_URL}/api/expenses?page=${currentPage}&size=${pageSize}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setExpenses(response.data.content);
+      setTotalPages(response.data.totalPages);
+      setTotalElements(response.data.totalElements);
+    } catch (err) {
+      console.error('Failed to fetch expenses:', err.response?.data || err.message);
+      navigate('/login');
+    }
+  };
 
-  } catch (err) {
-    console.error('Failed to fetch expenses:', err.response?.data || err.message);
-    navigate('/login');
-  }
-};
-
-const fetchAllExpenses = async () => {
-  try {
-    const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/expenses/all`, {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    setAllExpenses(response.data);
-  } catch (err) {
-    console.error('Failed to fetch all expenses for analytics:', err);
-    toast.error('Could not load analytics data.');
-  }
-};
-
-
+  const fetchAllExpenses = async () => {
+    try {
+      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/expenses/all`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setAllExpenses(response.data);
+    } catch (err) {
+      console.error('Failed to fetch all expenses for analytics:', err);
+      toast.error('Could not load analytics data.');
+    }
+  };
 
   const fetchCategories = async () => {
     try {
@@ -70,13 +78,11 @@ const fetchAllExpenses = async () => {
     }
   };
 
-useEffect(() => {
-  fetchExpenses();
-  fetchAllExpenses();
-  fetchCategories();
-}, [currentPage, pageSize]);
-
-
+  useEffect(() => {
+    fetchExpenses();
+    fetchAllExpenses();
+    fetchCategories();
+  }, [currentPage, pageSize]);
 
   const confirmDelete = async () => {
     try {
@@ -84,7 +90,7 @@ useEffect(() => {
         headers: { Authorization: `Bearer ${token}` }
       });
       setExpenses(prev => prev.filter(exp => exp.id !== selectedId));
-      toast.success('Expense deleted!');
+      toast.success('Expense deleted successfully! 🗑️');
     } catch (err) {
       console.error('Delete failed:', err.response?.data || err.message);
       toast.error('Failed to delete expense.');
@@ -94,209 +100,325 @@ useEffect(() => {
   };
 
   const getBadgeStyle = (categoryName) => {
-    const base = {
-      padding: '0.25rem 0.5rem',
-      borderRadius: '12px',
-      fontSize: '0.85rem',
-      color: '#fff',
-      fontWeight: 'bold'
+    const colorMap = {
+      'Food': { bg: '#fef3c7', color: '#d97706', border: '#f59e0b' },
+      'Transport': { bg: '#dbeafe', color: '#2563eb', border: '#3b82f6' },
+      'Entertainment': { bg: '#fce7f3', color: '#be185d', border: '#ec4899' },
+      'Health': { bg: '#dcfce7', color: '#16a34a', border: '#22c55e' },
+      'Shopping': { bg: '#f3e8ff', color: '#7c3aed', border: '#8b5cf6' },
+      'Bills': { bg: '#fee2e2', color: '#dc2626', border: '#ef4444' },
+      'Education': { bg: '#ecfdf5', color: '#059669', border: '#10b981' },
+      'Travel': { bg: '#fff7ed', color: '#ea580c', border: '#f97316' },
     };
 
-    // Generate consistent hash-based color
-    let hash = 0;
-    for (let i = 0; i < categoryName.length; i++) {
-      hash = categoryName.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    const hue = hash % 360;
-    const backgroundColor = `hsl(${hue}, 60%, 50%)`;
-
-    return { ...base, backgroundColor };
+    const style = colorMap[categoryName] || { bg: '#f3f4f6', color: '#6b7280', border: '#9ca3af' };
+    
+    return {
+      backgroundColor: style.bg,
+      color: style.color,
+      border: `1px solid ${style.border}`,
+    };
   };
 
-const getCategoryTotals = () => {
-  const totals = {};
-  allExpenses.forEach(exp => {
-    const name = exp.category?.name || 'Uncategorized';
-    totals[name] = (totals[name] || 0) + exp.amount;
-  });
-  return totals;
-};
+  const getCategoryTotals = () => {
+    const totals = {};
+    allExpenses.forEach(exp => {
+      const name = exp.category?.name || 'Uncategorized';
+      totals[name] = (totals[name] || 0) + exp.amount;
+    });
+    return totals;
+  };
 
+  const getTotalExpenses = () => {
+    return allExpenses.reduce((sum, exp) => sum + exp.amount, 0);
+  };
+
+  const getMonthlyTotal = () => {
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+    
+    return allExpenses
+      .filter(exp => {
+        const expenseDate = new Date(exp.date);
+        return expenseDate.getMonth() === currentMonth && expenseDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, exp) => sum + exp.amount, 0);
+  };
+
+  const getThisWeekTotal = () => {
+    const now = new Date();
+    const weekStart = new Date(now.setDate(now.getDate() - now.getDay()));
+    
+    return allExpenses
+      .filter(exp => new Date(exp.date) >= weekStart)
+      .reduce((sum, exp) => sum + exp.amount, 0);
+  };
+
+  const filteredExpenses = filterCategory 
+    ? expenses.filter(exp => exp.category?.name === filterCategory)
+    : expenses;
 
   return (
-    <>
+    <div className="dashboard-container">
       <Navbar />
-      <div style={{ padding: '2rem' }}>
-        <h2>Your Expenses</h2>
-
-        <div style={{ margin: '1rem 0' }}>
-          <label style={{ marginRight: '0.5rem' }}>Filter by Category:</label>
-          <select
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            style={{ padding: '0.5rem' }}
-          >
-            <option value="">All</option>
-            {categories.map(cat => (
-              <option key={cat.id} value={cat.name}>
-                {cat.name}
-              </option>
-            ))}
-          </select>
+      
+      <div className="dashboard-content">
+        {/* Header */}
+        <div className="dashboard-header">
+          <h1 className="dashboard-title">Financial Dashboard</h1>
+          <p className="dashboard-subtitle">
+            Track your expenses and take control of your finances
+          </p>
         </div>
 
-        {error && <p style={{ color: 'red' }}>{error}</p>}
+        {/* Stats Cards */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-header">
+              <div className="stat-title">Total Expenses</div>
+              <div className="stat-icon">
+                <DollarSign size={24} />
+              </div>
+            </div>
+            <div className="stat-value">${getTotalExpenses().toLocaleString()}</div>
+            <div className="stat-change positive">
+              <TrendingUp size={16} />
+              <span>All time</span>
+            </div>
+          </div>
 
-        <h3>Totals by Category</h3>
-        <ul>
-          {Object.entries(getCategoryTotals()).map(([cat, total]) => (
-            <li key={cat}><strong>{cat}:</strong> {total.toLocaleString()} RWF</li>
-          ))}
-        </ul>
+          <div className="stat-card">
+            <div className="stat-header">
+              <div className="stat-title">This Month</div>
+              <div className="stat-icon">
+                <Calendar size={24} />
+              </div>
+            </div>
+            <div className="stat-value">${getMonthlyTotal().toLocaleString()}</div>
+            <div className="stat-change">
+              <Activity size={16} />
+              <span>Current month</span>
+            </div>
+          </div>
 
-        <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+          <div className="stat-card">
+            <div className="stat-header">
+              <div className="stat-title">This Week</div>
+              <div className="stat-icon">
+                <BarChart3 size={24} />
+              </div>
+            </div>
+            <div className="stat-value">${getThisWeekTotal().toLocaleString()}</div>
+            <div className="stat-change">
+              <Activity size={16} />
+              <span>Last 7 days</span>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-header">
+              <div className="stat-title">Categories</div>
+              <div className="stat-icon">
+                <PieChart size={24} />
+              </div>
+            </div>
+            <div className="stat-value">{Object.keys(getCategoryTotals()).length}</div>
+            <div className="stat-change">
+              <Activity size={16} />
+              <span>Active categories</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Controls */}
+        <div className="controls-section">
+          <div className="filter-group">
+            <Filter size={20} style={{ color: 'var(--gray-600)' }} />
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">All Categories</option>
+              {categories.map(cat => (
+                <option key={cat.id} value={cat.name}>
+                  {cat.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <button
-            onClick={() => setShowCharts(prev => !prev)}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: '#007bff',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
+            onClick={() => setShowCharts(!showCharts)}
+            className="toggle-charts-btn"
           >
-            {showCharts ? 'Hide Analytics 📉' : 'Show Analytics 📊'}
+            {showCharts ? <BarChart3 size={20} /> : <PieChart size={20} />}
+            {showCharts ? 'Hide Analytics' : 'Show Analytics'}
+          </button>
+
+          <button
+            onClick={() => navigate('/add-expense')}
+            className="btn btn-success"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Plus size={18} />
+            Add Expense
           </button>
         </div>
 
+        {/* Charts */}
         <div className={`chart-wrapper ${showCharts ? 'show' : ''}`}>
-          <MonthlyChart expenses={allExpenses} />
-          <CategoryPieChart expenses={allExpenses} categories={categories} />
-
-        </div>
-
-        <table style={styles.table}>
-          <thead>
-            <tr>
-              <th style={styles.th}>Amount</th>
-              <th style={styles.th}>Description</th>
-              <th style={styles.th}>Date</th>
-              <th style={styles.th}>Category</th>
-              <th style={styles.th}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {expenses
-              .filter(exp => !filterCategory || exp.category?.name === filterCategory)
-              .map((expense) => (
-                <tr key={expense.id}>
-                  <td style={styles.td}>{expense.amount}</td>
-                  <td style={styles.td}>{expense.description}</td>
-                  <td style={styles.td}>{new Date(expense.dateTime).toLocaleDateString()}</td>
-                  <td style={styles.td}>
-                    <span style={getBadgeStyle(expense.category?.name || 'Uncategorized')}>
-                      {expense.category?.name || 'Uncategorized'}
-                    </span>
-                  </td>
-                  <td style={styles.td}>
-                    <button onClick={() => navigate(`/edit-expense/${expense.id}`)} style={styles.edit}>Edit</button>
-                    <button onClick={() => {
-                      setSelectedId(expense.id);
-                      setShowConfirm(true);
-                    }} style={styles.delete}>Delete</button>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            Showing {(currentPage * pageSize) + 1}–
-            {Math.min((currentPage + 1) * pageSize, totalElements)} of {totalElements}
-          </div>
-
-          <div>
-            <label style={{ marginRight: '0.5rem' }}>Rows per page:</label>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setCurrentPage(0); // reset to first page
-              }}
-            >
-              <option value={10}>10</option>
-              <option value={20}>20</option>
-              <option value={50}>50</option>
-            </select>
+          <div className="charts-grid">
+            <div className="chart-card">
+              <h3 className="chart-title">Monthly Trends</h3>
+              <MonthlyChart expenses={allExpenses} />
+            </div>
+            <div className="chart-card">
+              <h3 className="chart-title">Category Distribution</h3>
+              <CategoryPieChart expenses={allExpenses} />
+            </div>
           </div>
         </div>
 
-        <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'center', gap: '1rem' }}>
-            <button
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 0))}
-              disabled={currentPage === 0}
-            >
-              ◀ Previous
-            </button>
+        {/* Expenses Table */}
+        <div className="expenses-section">
+          <div className="section-header">
+            <h2 className="section-title">Recent Expenses</h2>
+            <div style={{ color: 'var(--gray-600)', fontSize: '0.875rem', fontWeight: '500' }}>
+              {totalElements} total expenses
+            </div>
+          </div>
 
-            <span>Page {currentPage + 1} of {totalPages}</span>
+          {error && (
+            <div style={{ 
+              color: 'var(--error-600)', 
+              background: 'var(--error-50)', 
+              padding: '1rem', 
+              borderRadius: 'var(--radius-lg)',
+              marginBottom: '1rem'
+            }}>
+              {error}
+            </div>
+          )}
 
-            <button
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages - 1))}
-              disabled={currentPage + 1 === totalPages}
-            >
-              Next ▶
-            </button>
+          {filteredExpenses.length === 0 ? (
+            <div className="empty-state">
+              <div className="empty-state-icon">
+                <DollarSign size={48} />
+              </div>
+              <h3 className="empty-state-title">No expenses found</h3>
+              <p className="empty-state-description">
+                Start tracking your expenses by adding your first entry
+              </p>
+              <button
+                onClick={() => navigate('/add-expense')}
+                className="btn btn-primary"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <Plus size={18} />
+                Add Your First Expense
+              </button>
+            </div>
+          ) : (
+            <>
+              <table className="expenses-table">
+                <thead>
+                  <tr>
+                    <th>Description</th>
+                    <th>Amount</th>
+                    <th>Category</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredExpenses.map(expense => (
+                    <tr key={expense.id}>
+                      <td className="expense-description">{expense.description}</td>
+                      <td className="expense-amount">${expense.amount.toLocaleString()}</td>
+                      <td>
+                        <span 
+                          className="category-badge"
+                          style={getBadgeStyle(expense.category?.name || 'Uncategorized')}
+                        >
+                          {expense.category?.name || 'Uncategorized'}
+                        </span>
+                      </td>
+                      <td className="expense-date">
+                        {new Date(expense.date).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </td>
+                      <td>
+                        <div className="action-buttons">
+                          <button
+                            onClick={() => navigate(`/edit-expense/${expense.id}`)}
+                            className="action-btn edit-btn"
+                            title="Edit expense"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              setSelectedId(expense.id);
+                              setShowConfirm(true);
+                            }}
+                            className="action-btn delete-btn"
+                            title="Delete expense"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+
+              {/* Pagination */}
+              <div className="pagination">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                  disabled={currentPage === 0}
+                  className="pagination-btn"
+                >
+                  <ChevronLeft size={18} />
+                  Previous
+                </button>
+                
+                <div className="pagination-info">
+                  Page {currentPage + 1} of {totalPages}
+                </div>
+                
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
+                  disabled={currentPage >= totalPages - 1}
+                  className="pagination-btn"
+                >
+                  Next
+                  <ChevronRight size={18} />
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
-
-        {showConfirm && (
-          <ConfirmDialog
-            message="Are you sure you want to delete this expense?"
-            onConfirm={confirmDelete}
-            onCancel={() => setShowConfirm(false)}
-          />
-        )}
-      </div>
-    </>
+      {/* Confirm Dialog */}
+      {showConfirm && (
+        <ConfirmDialog
+          message="Are you sure you want to delete this expense?"
+          onConfirm={confirmDelete}
+          onCancel={() => {
+            setShowConfirm(false);
+            setSelectedId(null);
+          }}
+        />
+      )}
+    </div>
   );
-};
-
-const styles = {
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse',
-    marginTop: '1rem',
-    border: '1px solid #ddd'
-  },
-  th: {
-    backgroundColor: '#f4f4f4',
-    padding: '0.75rem',
-    textAlign: 'left',
-    borderBottom: '1px solid #ddd'
-  },
-  td: {
-    padding: '0.75rem',
-    borderBottom: '1px solid #eee'
-  },
-  edit: {
-    marginRight: '0.5rem',
-    backgroundColor: '#ffc107',
-    color: '#000',
-    border: 'none',
-    padding: '0.3rem 0.6rem',
-    borderRadius: '4px',
-    cursor: 'pointer'
-  },
-  delete: {
-    backgroundColor: '#dc3545',
-    color: '#fff',
-    border: 'none',
-    padding: '0.3rem 0.6rem',
-    borderRadius: '4px',
-    cursor: 'pointer'
-  }
 };
 
 export default Dashboard;
